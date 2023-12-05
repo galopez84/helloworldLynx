@@ -1,0 +1,162 @@
+pipeline {
+    agent any
+     stages {
+        stage('Get Code') {
+        agent any      
+            steps {
+                // Obtener código del repo
+                git 'git@github.com:galopez84/helloworldLynx.git'
+                sh '''
+                        echo " Obtenemos el codigo "
+                        whoami
+                        uname -a
+                        echo ${WORKSPACE}
+                    '''
+                // Stash: 
+                stash name: 'workspace', includes: '**/*'
+                    }
+                    }
+        stage('Build') {
+        agent any
+           steps {
+              echo 'Eyyy, esto es Python. No hay que compilar nada!!!'
+                sh '''
+                hostname
+                uname -a
+                whoami
+                ls -lah
+                '''
+                    }
+                }
+        
+        stage('Run TESTS') {
+        parallel {
+            stage('TEST Unit') {
+            agent { label 'linux'}
+                  steps {
+                      catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                        unstash 'workspace'
+                          sh '''
+                              yum install pip -y
+                              pip install pytest
+                              export PYTHONPATH=$WORKSPACE
+                              pytest --junitxml=result-unit.xml test/unit
+                              whoami
+                              uname -a
+                              echo ${WORKSPACE}
+                          '''
+                    // Stash: 
+                        stash name: 'result', includes: '*result*'
+                                                                    }                          
+                        }
+                            }   
+      
+              stage('TEST Rest') {
+              agent { label 'ansible'}
+                  steps {
+                      unstash 'workspace'
+                      sh '''
+                          export FLASK_APP=app/api.py
+                          export FLASK_ENV=development
+                          export WIREMOCK_JAR=/root/wiremock/wiremock-standalone-3.3.1.jar
+                          export URL_WIREMOCK=https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.3.1/wiremock-standalone-3.3.1.jar
+                          yum install pip -y
+                          pip install flask
+                          pip install pytest
+                          nohup flask run &
+                          wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
+                          nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
+                          sleep 10
+                          export PYTHONPATH=%WORKSPACE%
+                          pytest --junitxml=result-rest.xml test/rest
+                          whoami
+                          uname -a
+                          echo ${WORKSPACE}
+                          ls -lrt
+                      '''
+                        // Stash: 
+                        stash name: 'result', includes: '*result*'
+                        }    
+                            }
+                }
+        }
+
+        stage('Results') {
+        agent { label 'linux'}
+            steps {
+                unstash 'result'
+                    sh '''
+                          whoami
+                          uname -a
+                          echo ${WORKSPACE}
+                          ls -lrt
+                      '''
+                junit 'result*.xml' 
+            }
+        }
+        
+        stage('Deploy') {
+        agent { label 'ansible'}
+            steps {
+                sh '''
+                echo "Estoy desplegando la aplicacion"
+                echo "Deploy Aplicacion.war"
+                whoami
+                uname -a
+                echo ${WORKSPACE}
+                ''' 
+            }
+        }
+
+        stage('Clean WSpace in all Nodes') {
+        parallel {
+            stage('Clean WSpace ansible node') {
+                agent { label 'ansible'}
+                steps {
+                    sh '''
+                    whoami
+                    uname -a
+                    echo ${WORKSPACE}
+                    ''' 
+                    script {
+                    // Limpieza después de realizar las operaciones necesarias
+                    cleanWs()
+                    }
+                    }
+     
+            }
+                stage('Clean WSpace linux node') {
+                agent { label 'linux'}
+                steps {
+                    sh '''
+                    whoami
+                    uname -a
+                    echo ${WORKSPACE}
+                    ''' 
+                    script {
+                    // Limpieza después de realizar las operaciones necesarias
+                    cleanWs()
+                    }
+                    }
+     
+            }
+                stage('Clean WSpace master node') {
+                agent any
+                steps {
+                    sh '''
+                    whoami
+                    uname -a
+                    echo ${WORKSPACE}
+                    ''' 
+                    script {
+                    // Limpieza después de realizar las operaciones necesarias
+                    cleanWs()
+                    }
+                    }
+     
+            }
+
+}
+}
+     }
+}
