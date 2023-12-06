@@ -50,6 +50,7 @@ pipeline {
                           wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
                           nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
                           export PYTHONPATH=%WORKSPACE%
+                          sleep 2
                           pytest --junitxml=result-rest.xml test/rest
                           whoami
                           uname -a
