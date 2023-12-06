@@ -1,28 +1,35 @@
 pipeline {
-    agent any
+    agent { label 'linux'}
 
      stages {
         stage('Get Code') {
             steps {
                 // Obtener código del repo
-                git 'https://github.com/anieto-unir/helloworld.git'
+                git branch: 'feature_fix_racecond', url: 'git@github.com:galopez84/helloworldLynx.git'
             }
         }
     
         stage('Build') {
            steps {
+            sh '''
               echo 'Eyyy, esto es Python. No hay que compilar nada!!!'
 	          echo WORKSPACE
-              bat 'dir'
+              ls -lrt
+              '''
            }
         }
         
         stage('Unit') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    bat '''
-                        set PYTHONPATH=%WORKSPACE%
-                        pytest --junitxml=result-unit.xml test\\unit
+                    sh '''
+                         yum install pip -y
+                              pip install pytest
+                              export PYTHONPATH=$WORKSPACE
+                              pytest --junitxml=result-unit.xml test/unit
+                              whoami
+                              uname -a
+                              echo ${WORKSPACE}
                     '''
                }
             }
@@ -31,13 +38,23 @@ pipeline {
 
         stage('Rest') {
             steps {
-                bat '''
-                    set FLASK_APP=app\\api.py
-                    set FLASK_ENV=development
-                    start flask run
-                    start java -jar C:\\Unir\\Ejercicios\\wiremock\\wiremock-jre8-standalone-2.28.0.jar --port 9090 --root-dir C:\\Unir\\Ejercicios\\wiremock
-                    set PYTHONPATH=%WORKSPACE%
-                    pytest --junitxml=result-rest.xml test\\rest
+                sh '''
+                    export FLASK_APP=app/api.py
+                          export FLASK_ENV=development
+                          export WIREMOCK_JAR=/root/wiremock/wiremock-standalone-3.3.1.jar
+                          export URL_WIREMOCK=https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.3.1/wiremock-standalone-3.3.1.jar
+                          yum install pip -y
+                          pip install flask
+                          pip install pytest
+                          nohup flask run &
+                          wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
+                          nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
+                          export PYTHONPATH=%WORKSPACE%
+                          pytest --junitxml=result-rest.xml test/rest
+                          whoami
+                          uname -a
+                          echo ${WORKSPACE}
+                          ls -lrt
                 '''
             }    
         }
