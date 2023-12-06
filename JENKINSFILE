@@ -5,7 +5,7 @@ pipeline {
         stage('Get Code') {
             steps {
                 // Obtener código del repo
-                git branch: 'feature_fix_racecond', url: 'git@github.com:galopez84/helloworldLynx.git'
+                git branch: 'master', url: 'git@github.com:galopez84/helloworldLynx.git'
             }
         }
     
@@ -49,8 +49,8 @@ pipeline {
                           nohup flask run &
                           wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
                           nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
-                          export PYTHONPATH=%WORKSPACE%
                           sleep 2
+                          export PYTHONPATH=%WORKSPACE%
                           pytest --junitxml=result-rest.xml test/rest
                           whoami
                           uname -a
