@@ -27,6 +27,7 @@ pipeline {
                           pip install flask
                           pip install pytest
                           nohup flask run &
+                          export WIREMOCK_JAR=/root/wiremock/wiremock-standalone-3.3.1.jar
                           wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
                           nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
                    '''             
@@ -53,7 +54,6 @@ pipeline {
                 sh '''
                     export FLASK_APP=app/api.py
                           export FLASK_ENV=development
-                          export WIREMOCK_JAR=/root/wiremock/wiremock-standalone-3.3.1.jar
                           export PYTHONPATH=%WORKSPACE%
                           pytest --junitxml=result-rest.xml test/rest
                           whoami
