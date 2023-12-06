@@ -5,7 +5,7 @@ pipeline {
         agent any      
             steps {
                 // Obtener código del repo
-                git 'git@github.com:galopez84/helloworldLynx.git'
+                git branch: 'develop', url: 'git@github.com:galopez84/helloworldLynx.git'
                 sh '''
                         echo " Obtenemos el codigo "
                         whoami
@@ -55,6 +55,7 @@ pipeline {
               agent { label 'ansible'}
                   steps {
                       unstash 'workspace'
+                      catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE'){
                       sh '''
                           export FLASK_APP=app/api.py
                           export FLASK_ENV=development
@@ -76,6 +77,7 @@ pipeline {
                       '''
                         // Stash: 
                         stash name: 'result', includes: '*result*'
+                                                        }
                         }    
                             }
                 }
