@@ -44,7 +44,7 @@ pipeline {
                                 echo "Esperando a que el servicio esté en ejecución..."
                                 sleep time: 1, unit: 'SECONDS'
                             }
-                            while (!flaskRunning) {
+                        while (!flaskRunning) {
                             try {
                                 sh 'curl http://localhost:5000'
                                 flaskRunning = true
