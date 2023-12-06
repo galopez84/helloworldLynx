@@ -41,9 +41,9 @@ class TestApi(unittest.TestCase):
        self.assertEqual(
            response.status, http.client.OK, f"Error en la petición API a {url}"
        )
-       self.assertEqual(
-           response.read().decode(), "5", "ERROR DIV"
-       )
+       result = int(response.read().decode())
+       expected_result = 5
+       self.assertEqual(result, expected_result, f"Resultado inesperado. Se esperaba {expected_result}, pero se obtuvo {result}")
        
     def test_api_sqrt(self):
         url = f"{BASE_URL_MOCK}/calc/sqrt/64"
