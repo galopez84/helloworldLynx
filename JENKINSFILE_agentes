@@ -67,7 +67,7 @@ pipeline {
                           nohup flask run &
                           wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
                           nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
-                          sleep 10
+                          sleep 3
                           export PYTHONPATH=%WORKSPACE%
                           pytest --junitxml=result-rest.xml test/rest
                           whoami
