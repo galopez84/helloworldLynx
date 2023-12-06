@@ -22,6 +22,8 @@ pipeline {
         stage('Start API') {
             steps {
                 sh '''
+                         export FLASK_APP=app/api.py
+                          export FLASK_ENV=development
                           export URL_WIREMOCK=https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.3.1/wiremock-standalone-3.3.1.jar
                           yum install pip -y
                           pip install flask
@@ -52,8 +54,7 @@ pipeline {
         stage('Rest') {
             steps {
                 sh '''
-                    export FLASK_APP=app/api.py
-                          export FLASK_ENV=development
+
                           export PYTHONPATH=%WORKSPACE%
                           pytest --junitxml=result-rest.xml test/rest
                           whoami
