@@ -5,7 +5,7 @@ pipeline {
         agent any      
             steps {
                 // Obtener código del repo
-                git branch: 'develop', url: 'git@github.com:galopez84/helloworldLynx.git'
+                git branch: 'master', url: 'git@github.com:galopez84/helloworldLynx.git'
                 sh '''
                         echo " Obtenemos el codigo "
                         whoami
