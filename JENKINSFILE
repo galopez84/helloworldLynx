@@ -18,13 +18,25 @@ pipeline {
               '''
            }
         }
+
+        stage('Start API') {
+            steps {
+                sh '''
+                          export URL_WIREMOCK=https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.3.1/wiremock-standalone-3.3.1.jar
+                          yum install pip -y
+                          pip install flask
+                          pip install pytest
+                          nohup flask run &
+                          wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
+                          nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
+                   '''             
+            }
+        }
         
         stage('Unit') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     sh '''
-                         yum install pip -y
-                              pip install pytest
                               export PYTHONPATH=$WORKSPACE
                               pytest --junitxml=result-unit.xml test/unit
                               whoami
@@ -42,14 +54,6 @@ pipeline {
                     export FLASK_APP=app/api.py
                           export FLASK_ENV=development
                           export WIREMOCK_JAR=/root/wiremock/wiremock-standalone-3.3.1.jar
-                          export URL_WIREMOCK=https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.3.1/wiremock-standalone-3.3.1.jar
-                          yum install pip -y
-                          pip install flask
-                          pip install pytest
-                          nohup flask run &
-                          wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
-                          nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
-                          sleep 2
                           export PYTHONPATH=%WORKSPACE%
                           pytest --junitxml=result-rest.xml test/rest
                           whoami
