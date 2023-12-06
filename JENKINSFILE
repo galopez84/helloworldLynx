@@ -34,6 +34,7 @@ pipeline {
                           nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
                    '''      
                  script {
+                    timeout(time: 30, unit: 'SECONDS'){
                         def flaskRunning = false
                         def mockRunning = false
                         while (!mockRunning ) {
@@ -41,7 +42,7 @@ pipeline {
                                 sh 'curl http://localhost:9090'
                                 mockRunning = true
                             } catch (Exception e) {
-                                echo "Esperando a que el servicio esté en ejecución..."
+                                echo "Esperando a que el mock este en ejecución"
                                 sleep time: 1, unit: 'SECONDS'
                             }
                         while (!flaskRunning) {
@@ -49,11 +50,12 @@ pipeline {
                                 sh 'curl http://localhost:5000'
                                 flaskRunning = true
                             } catch (Exception e) {
-                                echo "Esperando a que el servicio esté en ejecución..."
+                                echo "Esperando a que flask este en ejecución"
                                 sleep time: 1, unit: 'SECONDS'
                             }
                                                 }
                                             }
+                                                    }
                     }
             }
         }
