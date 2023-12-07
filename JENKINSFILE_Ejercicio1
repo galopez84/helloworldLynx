@@ -1,12 +1,18 @@
 podTemplate {
     node(POD_LABEL) {
-stage('Build') {
-sh 'echo "Hello World"'
-sh '''
-echo "Multiline shell steps works too"
-echo $WORKSPACE
-ls -lah
-'''
-}
-}
-}
+        stage('Download Code') {
+            git branch: 'master', url: 'https://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@github.com/galopez84/helloworldLynx.git'
+            sh '''
+                echo $WORKSPACE
+                ls -lah
+                '''
+        }
+        stage('Build') {
+            sh '''
+            echo 'Eyyy, esto es Python. No hay que compilar nada!!!'
+            echo $WORKSPACE
+            ls -lah
+                '''
+        }
+                }
+            }
