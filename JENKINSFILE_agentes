@@ -34,8 +34,7 @@ pipeline {
                               uname -a
                               echo ${WORKSPACE}
                           '''
-                    // Stash: 
-                        stash name: 'result-unit', includes: '*result*'
+                        junit 'result-unit.xml' 
                      }
                   }
               }   
@@ -64,8 +63,8 @@ pipeline {
                           echo ${WORKSPACE}
                           ls -lrt
                       '''
-                    // Stash: 
-                    stash name: 'result-rest', includes: '*result*'
+                    junit 'result-rest.xml'
+ 
                         }    
                     }
                 }
@@ -121,21 +120,6 @@ pipeline {
 
         }
         }
-        stage('Results Test UNIT - REST') {
-        agent { label 'linux'}
-            steps {
-                unstash 'result-rest'
-                unstash 'result-unit'
-                    sh '''
-                          whoami
-                          uname -a
-                          echo ${WORKSPACE}
-                          ls -lrt
-                      '''
-                junit 'result*.xml' 
-            }
-        }
-
 
         stage ('Performance') {
         agent { label 'ansible'}

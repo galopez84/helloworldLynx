@@ -36,8 +36,7 @@ pipeline {
                               uname -a
                               echo ${WORKSPACE}
                           '''
-                    // Stash: 
-                        stash name: 'result-unit', includes: '*result*'
+                    junit 'result-unit.xml' 
                      }
                   }
               }   
@@ -66,8 +65,7 @@ pipeline {
                           echo ${WORKSPACE}
                           ls -lrt
                       '''
-                    // Stash: 
-                    stash name: 'result-rest', includes: '*result*'
+                junit 'result-rest.xml'
                   }    
               }
         }
@@ -140,21 +138,6 @@ pipeline {
                     $JMETER_HOME/bin/jmeter -n -t test/jmeter/flask.jmx -f -l result_test1_jmter.jtl
                     '''
                 perfReport sourceDataFiles: 'result_test1_jmter.jtl'
-            }
-        }
-
-        stage('Results') {
-        agent { label 'linux'}
-            steps {
-                unstash 'result-rest'
-                unstash 'result-unit'
-                    sh '''
-                          whoami
-                          uname -a
-                          echo ${WORKSPACE}
-                          ls -lrt
-                      '''
-                junit 'result*.xml' 
             }
         }
 
