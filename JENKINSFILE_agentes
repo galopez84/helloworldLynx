@@ -2,39 +2,28 @@ pipeline {
     agent any
      stages {
         stage('Get Code') {
-        agent any      
+        agent any
             steps {
-                // Obtener código del repo
-                git branch: 'master', url: 'git@github.com:galopez84/helloworldLynx.git'
-                sh '''
+                // Obtener código del rep
+                    sh '''
                         echo " Obtenemos el codigo "
                         whoami
                         uname -a
                         echo ${WORKSPACE}
                     '''
+                git branch: 'master', url: 'git@github.com:galopez84/helloworldLynx.git'
+
                 // Stash: 
                 stash name: 'workspace', includes: '**/*'
-                    }
-                    }
-        stage('Build') {
-        agent any
-           steps {
-              echo 'Eyyy, esto es Python. No hay que compilar nada!!!'
-                sh '''
-                hostname
-                uname -a
-                whoami
-                ls -lah
-                '''
-                    }
-                }
-        
+            }
+        }
+
         stage('Run TESTS') {
         parallel {
             stage('TEST Unit') {
             agent { label 'linux'}
                   steps {
-                      catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                      catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
                         unstash 'workspace'
                           sh '''
                               yum install pip -y
@@ -46,16 +35,16 @@ pipeline {
                               echo ${WORKSPACE}
                           '''
                     // Stash: 
-                        stash name: 'result_unit', includes: '*result-unit*'
-                                                                    }                          
-                        }
-                            }   
+                        stash name: 'result-unit', includes: '*result*'
+                     }
+                  }
+              }   
       
               stage('TEST Rest') {
               agent { label 'ansible'}
                   steps {
+                      catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
                       unstash 'workspace'
-                      catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE'){
                       sh '''
                           export FLASK_APP=app/api.py
                           export FLASK_ENV=development
@@ -67,7 +56,7 @@ pipeline {
                           nohup flask run &
                           wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
                           nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
-                          sleep 3
+                          sleep 2
                           export PYTHONPATH=%WORKSPACE%
                           pytest --junitxml=result-rest.xml test/rest
                           whoami
@@ -75,19 +64,68 @@ pipeline {
                           echo ${WORKSPACE}
                           ls -lrt
                       '''
-                        // Stash: 
-                        stash name: 'result_rest', includes: '*result-rest*'
-                                                        }
+                    // Stash: 
+                    stash name: 'result-rest', includes: '*result*'
                         }    
-                            }
+                    }
                 }
-        }
 
-        stage('Results') {
+                stage ('TEST - Flake8') {
+                    agent { label 'linux'}
+                        steps {
+                            catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
+                            unstash 'workspace'
+                            sh '''
+                                    yum install pip -y
+                                    pip install flake8
+                                    flake8 --format=pylint --exit-zero app > flake8.out
+                                    whoami
+                                    uname -a
+                                '''
+                            recordIssues tools: [flake8(name: 'Flake8', pattern: 'flake8.out')], qualityGates: [[threshold: 8, type: 'TOTAL', unstable: true], [threshold: 10, type: 'TOTAL', unstable: false]]
+                        }
+                        }
+                    }
+
+                stage ('TEST - Security') {
+                    agent { label 'ansible'}
+                    steps {
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
+                        unstash 'workspace'
+                        sh '''
+                            pip install bandit
+                            bandit --exit-zero -r . -f custom -o bandit.out --severity-level medium --msg-template "{abspath}:{line}: [{test_id}] {msg}"
+                            whoami
+                            uname -a
+                            '''
+                        recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')], qualityGates: [[threshold:2, type: 'TOTAL', unstable: true], [threshold: 4, type: 'TOTAL', unstable: false]]
+                    }
+                    }
+                }
+
+                stage ('Cobertura') {
+                agent { label 'linux'}
+                    steps {
+                        unstash 'workspace'
+                        sh '''
+                            pip install coverage
+                            coverage run --branch --source=app --omit=app/__init__.py,app/api.py -m pytest test/unit
+                            coverage xml
+                            whoami
+                            uname -a                
+                            '''
+                        cobertura autoUpdateHealth: false, autoUpdateStability: false, coberturaReportFile: 'coverage.xml', conditionalCoverageTargets: '100, 80, 90', failNoReports: false, failUnhealthy: false, failUnstable: false, lineCoverageTargets: '100, 85, 95', maxNumberOfBuilds: 0, onlyStable: false, sourceEncoding: 'ASCII', zoomCoverageChart: false
+                    }
+                }
+
+
+        }
+        }
+        stage('Results Test UNIT - REST') {
         agent { label 'linux'}
             steps {
-                unstash 'result_rest'
-                unstash 'result_unit'
+                unstash 'result-rest'
+                unstash 'result-unit'
                     sh '''
                           whoami
                           uname -a
@@ -97,69 +135,32 @@ pipeline {
                 junit 'result*.xml' 
             }
         }
-        
-        stage('Deploy') {
+
+
+        stage ('Performance') {
         agent { label 'ansible'}
             steps {
+                unstash 'workspace'
                 sh '''
-                echo "Estoy desplegando la aplicacion"
-                echo "Deploy Aplicacion.war"
-                whoami
-                uname -a
-                echo ${WORKSPACE}
-                ''' 
+                    export FLASK_APP=app/api.py
+                    export FLASK_ENV=development
+                    export WIREMOCK_JAR=/root/wiremock/wiremock-standalone-3.3.1.jar
+                    export URL_WIREMOCK=https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.3.1/wiremock-standalone-3.3.1.jar
+                    yum install pip -y
+                    pip install flask
+                    pip install pytest
+                    nohup flask run &
+                    wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
+                    nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
+                    sleep 2
+                    export JMETER_HOME=/opt/jmeter/apache-jmeter-5.6.2
+                    $JMETER_HOME/bin/jmeter -n -t test/jmeter/flask.jmx -f -l result_test1_jmter.jtl
+                    '''
+                perfReport sourceDataFiles: 'result_test1_jmter.jtl'
             }
         }
 
-        stage('Clean WSpace in all Nodes') {
-        parallel {
-            stage('Clean WSpace ansible node') {
-                agent { label 'ansible'}
-                steps {
-                    sh '''
-                    whoami
-                    uname -a
-                    echo ${WORKSPACE}
-                    ''' 
-                    script {
-                    // Limpieza después de realizar las operaciones necesarias
-                    cleanWs()
-                    }
-                    }
-     
-            }
-                stage('Clean WSpace linux node') {
-                agent { label 'linux'}
-                steps {
-                    sh '''
-                    whoami
-                    uname -a
-                    echo ${WORKSPACE}
-                    ''' 
-                    script {
-                    // Limpieza después de realizar las operaciones necesarias
-                    cleanWs()
-                    }
-                    }
-     
-            }
-                stage('Clean WSpace master node') {
-                agent any
-                steps {
-                    sh '''
-                    whoami
-                    uname -a
-                    echo ${WORKSPACE}
-                    ''' 
-                    script {
-                    // Limpieza después de realizar las operaciones necesarias
-                    cleanWs()
-                    }
-                    }
-     
-            }
 
-}
-}
-     }
-}
+    }
+    }
+

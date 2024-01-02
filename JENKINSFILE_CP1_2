@@ -137,7 +137,7 @@ pipeline {
                     nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
                     sleep 2
                     export JMETER_HOME=/opt/jmeter/apache-jmeter-5.6.2
-                    $JMETER_HOME/bin/jmeter -n -t jmeter/test/test1.jmx -f -l result_test1_jmter.jtl
+                    $JMETER_HOME/bin/jmeter -n -t test/jmeter/flask.jmx -f -l result_test1_jmter.jtl
                     '''
                 perfReport sourceDataFiles: 'result_test1_jmter.jtl'
             }
