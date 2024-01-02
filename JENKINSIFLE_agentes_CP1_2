@@ -17,6 +17,9 @@ pipeline {
                 stash name: 'workspace', includes: '**/*'
             }
         }
+
+        
+
         stage('Run TESTS') {
         parallel {
             stage('TEST Unit') {
@@ -122,6 +125,17 @@ pipeline {
             steps {
                 unstash 'workspace'
                 sh '''
+                    export FLASK_APP=app/api.py
+                    export FLASK_ENV=development
+                    export WIREMOCK_JAR=/root/wiremock/wiremock-standalone-3.3.1.jar
+                    export URL_WIREMOCK=https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.3.1/wiremock-standalone-3.3.1.jar
+                    yum install pip -y
+                    pip install flask
+                    pip install pytest
+                    nohup flask run &
+                    wget -q -O $WIREMOCK_JAR $URL_WIREMOCK
+                    nohup java -jar $WIREMOCK_JAR --port 9090 --root-dir $WORKSPACE/test/wiremock &
+                    sleep 2
                     export JMETER_HOME=/opt/jmeter/apache-jmeter-5.6.2
                     $JMETER_HOME/bin/jmeter -n -t jmeter/test/test1.jmx -f -l result_test1_jmter.jtl
                     '''
