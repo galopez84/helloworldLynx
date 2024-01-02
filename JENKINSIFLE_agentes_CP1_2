@@ -143,6 +143,21 @@ pipeline {
             }
         }
 
+        stage('Results') {
+        agent { label 'linux'}
+            steps {
+                unstash 'result-rest'
+                unstash 'result-unit'
+                    sh '''
+                          whoami
+                          uname -a
+                          echo ${WORKSPACE}
+                          ls -lrt
+                      '''
+                junit 'result*.xml' 
+            }
+        }
+
         stage('Clean WSpace in all Nodes') {
         parallel {
             stage('Clean WSpace ansible node') {
