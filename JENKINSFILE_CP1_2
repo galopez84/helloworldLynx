@@ -88,7 +88,7 @@ pipeline {
               }
         }
 
-        stage ('Flake8') {
+        stage ('TEST - STATIC - Flake8') {
         agent { label 'linux'}
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
@@ -106,7 +106,7 @@ pipeline {
         }
 
 
-        stage ('Security') {
+        stage ('Security - bandit') {
         agent { label 'linux'}
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
@@ -121,7 +121,7 @@ pipeline {
         }
 
 
-        stage ('Performance') {
+        stage ('Performance - jmeter') {
         agent { label 'linux'}
             steps {
                 unstash 'workspace'
