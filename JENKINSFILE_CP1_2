@@ -19,28 +19,45 @@ pipeline {
         }
 
         
-            stage ('Test UNIT / Cobertura') {
-            agent { label 'linux'}
-                steps {
-                    catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
-                    unstash 'workspace'
-                    sh '''
-                        yum install pip -y
-                        pip install pytest
-                        export PYTHONPATH=$WORKSPACE
-                        pip install coverage
-                        coverage run --branch --source=app --omit=app/__init__.py,app/api.py -m pytest --junitxml=result-unit.xml test/unit
-                        coverage report -m
-                        coverage xml
-                        whoami
-                        uname -a
-                        echo ${WORKSPACE}
-                        '''
-                    cobertura autoUpdateHealth: false, autoUpdateStability: false, coberturaReportFile: 'coverage.xml', conditionalCoverageTargets: '100, 80, 90', failNoReports: false, failUnhealthy: false, failUnstable: false, lineCoverageTargets: '100, 85, 95', maxNumberOfBuilds: 0, onlyStable: false, sourceEncoding: 'ASCII', zoomCoverageChart: false
-                    junit 'result-unit.xml' 
-                }
-                }
-            }
+                stage ('Cobertura') {
+                agent { label 'linux'}
+                    steps {
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
+                        unstash 'workspace'
+                        sh '''
+                            yum install pip -y
+                            pip install pytest
+                            export PYTHONPATH=$WORKSPACE
+                            pip install coverage
+                            coverage run --branch --source=app --omit=app/__init__.py,app/api.py -m pytest --junitxml=result-unit.xml test/unit
+                            coverage report -m
+                            coverage xml
+                            whoami
+                            uname -a
+                            echo ${WORKSPACE}
+                            '''
+                        cobertura autoUpdateHealth: false, autoUpdateStability: false, coberturaReportFile: 'coverage.xml', conditionalCoverageTargets: '100, 80, 90', failNoReports: false, failUnhealthy: false, failUnstable: false, lineCoverageTargets: '100, 85, 95', maxNumberOfBuilds: 0, onlyStable: false, sourceEncoding: 'ASCII', zoomCoverageChart: false
+                        stash name: 'result-unit', includes: '*result-unit*'                   
+                    }
+                    }
+                }            
+             
+              stage ('Test UNIT') {
+                agent { label 'ansible'}
+                    steps {
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
+                        unstash 'workspace'
+                        unstash 'result-unit'
+                        sh '''
+                            whoami
+                            uname -a
+                            echo ${WORKSPACE}
+                            '''
+                        junit 'result-unit.xml' 
+                    }
+                    }
+                }            
+
      
               stage('TEST Rest') {
               agent { label 'ansible'}

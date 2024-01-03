@@ -21,7 +21,7 @@ pipeline {
         stage('Run TESTS') {
         parallel {
 
-                stage ('Test UNIT / Cobertura') {
+                stage ('Cobertura') {
                 agent { label 'linux'}
                     steps {
                         catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
@@ -39,12 +39,27 @@ pipeline {
                             echo ${WORKSPACE}
                             '''
                         cobertura autoUpdateHealth: false, autoUpdateStability: false, coberturaReportFile: 'coverage.xml', conditionalCoverageTargets: '100, 80, 90', failNoReports: false, failUnhealthy: false, failUnstable: false, lineCoverageTargets: '100, 85, 95', maxNumberOfBuilds: 0, onlyStable: false, sourceEncoding: 'ASCII', zoomCoverageChart: false
-                        junit 'result-unit.xml' 
+                        stash name: 'result-unit', includes: '*result-unit*'                   
                     }
                     }
                 }            
              
-                
+              stage ('Test UNIT') {
+                agent { label 'ansible'}
+                    steps {
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'SUCCESS') {
+                        unstash 'workspace'
+                        unstash 'result-unit'
+                        sh '''
+                            whoami
+                            uname -a
+                            echo ${WORKSPACE}
+                            '''
+                        junit 'result-unit.xml' 
+                    }
+                    }
+                }            
+
               stage('TEST Rest') {
               agent { label 'ansible'}
                   steps {
